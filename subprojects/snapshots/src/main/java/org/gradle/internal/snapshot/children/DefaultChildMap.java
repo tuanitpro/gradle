@@ -16,23 +16,20 @@
 
 package org.gradle.internal.snapshot.children;
 
-import com.google.common.collect.ImmutableList;
 import org.gradle.internal.snapshot.CaseSensitivity;
+import org.gradle.internal.snapshot.SearchUtil;
 import org.gradle.internal.snapshot.VfsRelativePath;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class SingletonChildMap<T> implements ChildMap<T> {
-    private final Entry<T> entry;
+public class DefaultChildMap<T> implements ChildMap<T> {
+    private final List<Entry<T>> children;
     private final CaseSensitivity caseSensitivity;
 
-    public SingletonChildMap(String path, T child, CaseSensitivity caseSensitivity) {
-        this(new Entry<>(path, child), caseSensitivity);
-    }
-
-    public SingletonChildMap(Entry<T> entry, CaseSensitivity caseSensitivity) {
-        this.entry = entry;
+    public DefaultChildMap(List<Entry<T>> children, CaseSensitivity caseSensitivity) {
+        this.children = children;
         this.caseSensitivity = caseSensitivity;
     }
 
@@ -43,42 +40,47 @@ public class SingletonChildMap<T> implements ChildMap<T> {
 
     @Override
     public <R> R handlePath(VfsRelativePath relativePath, PathRelationshipHandler<R> handler) {
-        return entry.handlePath(relativePath, 0, caseSensitivity, handler);
+        int childIndex = SearchUtil.binarySearch(
+            children,
+            candidate -> relativePath.compareToFirstSegment(candidate.getPath(), caseSensitivity)
+        );
+        if (childIndex >= 0) {
+            return children.get(childIndex).handlePath(relativePath, childIndex, caseSensitivity, handler);
+        }
+        return handler.handleDifferent(-childIndex - 1);
     }
 
     @Override
     public T get(int index) {
-        checkIndex(index);
-        return entry.getValue();
+        return children.get(index).getValue();
     }
 
     @Override
     public ChildMap<T> withNewChild(int insertBefore, String path, T newChild) {
-        Entry<T> newEntry = new Entry<>(path, newChild);
-        List<Entry<T>> newChildren = insertBefore == 0
-            ? ImmutableList.of(newEntry, entry)
-            : ImmutableList.of(entry, newEntry);
+        List<Entry<T>> newChildren = new ArrayList<>(children);
+        newChildren.add(insertBefore, new Entry<>(path, newChild));
         return new DefaultChildMap<>(newChildren, caseSensitivity);
     }
 
     @Override
     public ChildMap<T> withReplacedChild(int childIndex, T newChild) {
-        checkIndex(childIndex);
-        if (entry.getValue().equals(newChild)) {
+        Entry<T> oldEntry = children.get(childIndex);
+        if (oldEntry.getValue().equals(newChild)) {
             return this;
         }
-        return new SingletonChildMap<>(entry.getPath(), newChild, caseSensitivity);
+        List<Entry<T>> newChildren = new ArrayList<>(children);
+        newChildren.set(childIndex, new Entry<>(oldEntry.getPath(), newChild));
+        return new DefaultChildMap<>(newChildren, caseSensitivity);
     }
 
     @Override
     public ChildMap<T> withRemovedChild(int childIndex) {
-        checkIndex(childIndex);
-        return new EmptyChildMap<>(caseSensitivity);
-    }
-
-    private void checkIndex(int childIndex) {
-        if (childIndex != 0) {
-            throw new IndexOutOfBoundsException("Index out of range: " + childIndex);
+        List<Entry<T>> newChildren = new ArrayList<>(children);
+        newChildren.remove(childIndex);
+        if (newChildren.size() == 1) {
+            Entry<T> onlyChild = newChildren.get(0);
+            return new SingletonChildMap<>(onlyChild, caseSensitivity);
         }
+        return new DefaultChildMap<>(newChildren, caseSensitivity);
     }
 }

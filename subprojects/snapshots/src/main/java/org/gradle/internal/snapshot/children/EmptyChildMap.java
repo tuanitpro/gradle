@@ -22,7 +22,7 @@ import org.gradle.internal.snapshot.VfsRelativePath;
 import java.util.Optional;
 
 public class EmptyChildMap<T> implements ChildMap<T> {
-    private EmptyChildMap(CaseSensitivity caseSensitivity) {
+    public EmptyChildMap(CaseSensitivity caseSensitivity) {
         this.caseSensitivity = caseSensitivity;
     }
 
@@ -34,7 +34,34 @@ public class EmptyChildMap<T> implements ChildMap<T> {
     }
 
     @Override
-    public ChildMap<T> put(VfsRelativePath relativePath, T value) {
-        return null;
+    public <R> R handlePath(VfsRelativePath relativePath, PathRelationshipHandler<R> handler) {
+        return handler.handleDifferent(0);
+    }
+
+    @Override
+    public T get(int index) {
+        throw indexOutOfBoundsException(index);
+    }
+
+    @Override
+    public ChildMap<T> withNewChild(int insertBefore, String path, T newChild) {
+        if (insertBefore != 0) {
+            throw indexOutOfBoundsException(insertBefore);
+        }
+        return new SingletonChildMap<>(path, newChild, caseSensitivity);
+    }
+
+    @Override
+    public ChildMap<T> withReplacedChild(int childIndex, T newChild) {
+        throw indexOutOfBoundsException(childIndex);
+    }
+
+    @Override
+    public ChildMap<T> withRemovedChild(int childIndex) {
+        throw indexOutOfBoundsException(childIndex);
+    }
+
+    private static IndexOutOfBoundsException indexOutOfBoundsException(int childIndex) {
+        return new IndexOutOfBoundsException("Index out of range: " + childIndex);
     }
 }
