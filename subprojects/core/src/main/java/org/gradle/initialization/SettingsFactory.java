@@ -49,15 +49,24 @@ public class SettingsFactory {
 
         ClassLoaderScope classLoaderScope = baseClassLoaderScope.createChild("settings");
         ScriptHandlerInternal settingsScriptHandler = scriptHandlerFactory.create(settingsScript, classLoaderScope);
+        DependenciesAccessors accessors = gradle.getServices().get(DependenciesAccessors.class);
+        maybeLoadDependenciesAccessors(accessors, settingsDir, classLoaderScope);
         DefaultSettings settings = instantiator.newInstance(DefaultSettings.class,
             serviceRegistryFactory, gradle,
             classLoaderScope, baseClassLoaderScope, settingsScriptHandler,
             settingsDir, settingsScript, startParameter
         );
+        accessors.createExtension(settings.getExtensions());
 
         DynamicObject dynamicObject = ((DynamicObjectAware) settings).getAsDynamicObject();
         ((ExtensibleDynamicObject) dynamicObject).addProperties(gradleProperties);
         return settings;
     }
 
+    private void maybeLoadDependenciesAccessors(DependenciesAccessors accessors, File settingsDir, ClassLoaderScope classLoaderScope) {
+        File dependenciesFile = new File(settingsDir, "gradle/dependencies.toml");
+        if (dependenciesFile.exists()) {
+            accessors.generateAccessors(dependenciesFile, classLoaderScope);
+        }
+    }
 }
