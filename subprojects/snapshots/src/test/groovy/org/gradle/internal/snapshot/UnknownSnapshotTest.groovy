@@ -16,6 +16,7 @@
 
 package org.gradle.internal.snapshot
 
+
 import spock.lang.Unroll
 
 import static org.gradle.internal.snapshot.CaseSensitivity.CASE_SENSITIVE
@@ -24,8 +25,8 @@ import static org.gradle.internal.snapshot.CaseSensitivity.CASE_SENSITIVE
 class UnknownSnapshotTest extends AbstractIncompleteSnapshotWithChildrenTest<UnknownSnapshot> {
 
     @Override
-    protected UnknownSnapshot createInitialRootNode(String pathToParent, List<FileSystemNode> children) {
-        return new UnknownSnapshot(pathToParent, children)
+    protected UnknownSnapshot createInitialRootNode(ChildMap<FileSystemNode> children) {
+        return new UnknownSnapshot(children)
     }
 
     @Override
@@ -71,7 +72,7 @@ class UnknownSnapshotTest extends AbstractIncompleteSnapshotWithChildrenTest<Unk
 
     def "invalidate #vfsSpec.searchedPath invalidates children of #vfsSpec.selectedChildPath (#vfsSpec)"() {
         setupTest(vfsSpec)
-//        def invalidatedChild = mockChild(selectedChild.pathToParent)
+        def invalidatedChild = mockChild()
 
         when:
         def resultRoot = initialRoot.invalidate(searchedPath, CASE_SENSITIVE, diffListener).get()
@@ -127,7 +128,7 @@ class UnknownSnapshotTest extends AbstractIncompleteSnapshotWithChildrenTest<Unk
     }
 
     def "returns empty for snapshot"() {
-        def node = new UnknownSnapshot("some/prefix", createChildren(["myFile.txt"]))
+        def node = new UnknownSnapshot(createChildren(["myFile.txt"]))
 
         expect:
         !node.getSnapshot().present
