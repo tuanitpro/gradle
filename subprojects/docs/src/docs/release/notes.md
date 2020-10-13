@@ -46,9 +46,9 @@ Garbage collection time goes from [2.6 seconds](https://scans.gradle.com/s/3bg67
 
 While the impact on your build may vary, most builds can expect a noticeably shorter feedback loop when editing Kotlin DSL build logic thanks to this improvement.
 
-### Improved cache hits with normalized runtime classpaths
+### Improved cache hits when normalizing runtime classpaths
 
-For [up-to-date checks](userguide/more_about_tasks.html#sec:up_to_date_checks) and the [build cache](userguide/build_cache.html), Gradle needs to determine if two task input properties have the same value. In order to do so, Gradle first normalizes both inputs and then compares the result.
+For [up-to-date checks](userguide/more_about_tasks.html#sec:up_to_date_checks) and the [build cache](userguide/build_cache.html), Gradle needs to determine if two task input properties have the same value. In order to do so, Gradle first [normalizes](userguide/more_about_tasks.html#sec:configure_input_normalization) both inputs and then compares the result.
 
 Runtime classpath analysis now smartly inspects all properties files, ignoring changes to comments, whitespace, and differences in property order.  Moreover, you can selectively ignore properties that don't impact the runtime classpath.
 
